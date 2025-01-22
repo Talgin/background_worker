@@ -1,0 +1,24 @@
+version: '3'
+services:
+  lpr_worker:
+    image: talgin/analytics_worker:v1
+    #build:
+    #  context: ./app
+    #  dockerfile: ./Dockerfile
+    network_mode: "host"
+    container_name: lpr_worker
+    environment:
+      - KAFKA_SERVER=37.99.82.96:40002
+      - MONGO_SERVER=mongodb://localhost:27017
+    volumes:
+      - ./app:/app
+      - /mnt/hdd_4TB/POLICE/STORAGE/:/STORAGE
+    working_dir: /app
+    restart: unless-stopped
+    shm_size: 1g
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    # command: tail -f /dev/null
+    command: sh -c "sleep 3s && python save_lpr_metadata_new.py"
+

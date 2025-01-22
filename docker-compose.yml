@@ -1,0 +1,26 @@
+services:
+  face_worker:
+    image: talgin/analytics_worker:v1
+    build:
+      context: ./app
+      dockerfile: ./Dockerfile
+    network_mode: "host"
+    container_name: faces_worker
+    environment:
+      - KAFKA_SERVER=192.168.1.85:40008
+      - KAFKA_CONSUMER_TOPIC=face_results
+      - KAFKA_CONSUMER_GROUP=face_analytics_group
+      - PG_DATABASE_URL=postgresql://skud_face:skud_face@194.4.56.77:5432/skud_face
+      - MONGO_SERVER=mongodb://localhost:27017
+    volumes:
+      - ./app:/app
+      - /mnt/hdd_4TB/POLICE/STORAGE/:/STORAGE
+    working_dir: /app
+    restart: unless-stopped
+    shm_size: 1g
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    # command: tail -f /dev/null
+    # command: sh -c "sleep 2s && python save_face_metadata.py"
+    command: uvicorn face_background_worker:app --host 0.0.0.0 --port 40010 --forwarded-allow-ips "*" --workers 4 --log-level debug --reload
