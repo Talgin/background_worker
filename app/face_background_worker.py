@@ -6,6 +6,7 @@ import asyncio
 import asyncpg
 import os
 import logging
+from pymilvus import MilvusClient
 
 app = FastAPI()
 
@@ -65,6 +66,11 @@ try:
 except Exception as e:
     logger.error(f"Failed to connect to Kafka: {e}")
 
+# Init and load Milvus collection
+milvus_client = MilvusClient(uri = os.getenv('MILVUS_URI'), db_name = os.getenv('MILVUS_DB'))
+milvus_client.load_collection(os.getenv('MILVUS_COLLECTION'))
+logging.info(f"Milvus connection successfull.")
+
 # SSE setup
 clients = ['']
 
@@ -82,12 +88,21 @@ async def get_events(request: Request):
                     for message in consumer:
                         data = message.value
                         logging.info('Data received from Kafka: %s', data)
+                        # Get IIN from Milvus DB
+
+                        # End of Get IIN from Milvus DB
+
                         # Save to database
                         try:
+                            # await conn.execute('''
+                            # INSERT INTO innout (point_id, card_id, decision, crop_url, original_image_url, time_of_action, gender, age, camera_id)
+                            # VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                            # ''', data['point_id'], data['card_id'], data['decision'], data['crop_url'], data['original_image_url'], data['time_of_action'], data['gender'], data['age'], data['camera_id'])
                             await conn.execute('''
                             INSERT INTO innout (point_id, card_id, decision, crop_url, original_image_url, time_of_action, gender, age, camera_id)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                            ''', data['point_id'], data['card_id'], data['decision'], data['crop_url'], data['original_image_url'], data['time_of_action'], data['gender'], data['age'], data['camera_id'])
+                            ''', None, data['card_id'], None, data['crop_url'], data['original_image_url'], data['time_of_action'], None, None, data['camera_id'])
+                            # { 'start_time': start_time, 'frame': image.shape, 'faces': embs, 'camera_name': camera_name, 'time_of_action': timestamp, 'camera_id': camera_id}
                             logger.info(f"Data written to database: {data}")
                         except Exception as e:
                             logger.error(f"Failed to write data to database: {e}")
@@ -113,6 +128,21 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     pass
+
+# get IIN from Milvus DB by vector
+def get_iin_by_vector(vector):
+    result = milvus_client.search(
+        collection_name = os.getenv('MILVUS_COLLECTION'),
+        data = vector,
+        limit = 1,
+        search_params = {"metric_type": "COSINE", "params":{}}
+    )
+    result = result[0][0]
+    logging.info(f"distance - {result.get('distance')}")
+    
+    if result.get("distance") > 0.5: 
+        return result.get("id")
+    return None
 
 # if __name__ == "__main__":
 #     import uvicorn
