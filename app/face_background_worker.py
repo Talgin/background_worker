@@ -101,8 +101,8 @@ async def get_events(request: Request):
                             await conn.execute('''
                             INSERT INTO innout (point_id, card_id, decision, crop_url, original_image_url, time_of_action, gender, age, camera_id)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                            ''', None, data['card_id'], None, data['crop_url'], data['original_image_url'], data['time_of_action'], None, None, data['camera_id'])
-                            # { 'start_time': start_time, 'frame': image.shape, 'faces': embs, 'camera_name': camera_name, 'time_of_action': timestamp, 'camera_id': camera_id}
+                            ''', None, data['card_id'], None, data['crop_path'], data['frame_path'], data['time_of_action'], None, None, data['camera_id'])
+                            # {'start_time': start_time, 'crop_path': aligned_path, 'frame_path': original_frame_path, 'time_of_action': timestamp, 'gender': None, 'age': None, 'camera_id': camera_id, 'face_embedding': embs, 'face_info': res_dict, 'camera_name': camera_name}
                             logger.info(f"Data written to database: {data}")
                         except Exception as e:
                             logger.error(f"Failed to write data to database: {e}")
