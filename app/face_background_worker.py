@@ -96,7 +96,7 @@ async def get_events(request: Request):
                         # Converting str datetime to datetime object
                         timestamp_dt = datetime.strptime(data['time_of_action'], '%Y-%m-%d %H:%M:%S')
                         # Revise the following after middleware is implemented
-                        point_id = 1
+                        point_id = 2
                         decision = True
                         gender = 'male'
                         age = 34
