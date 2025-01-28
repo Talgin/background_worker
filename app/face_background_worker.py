@@ -7,6 +7,7 @@ import asyncpg
 import os
 import logging
 from pymilvus import MilvusClient
+from datetime import datetime
 
 app = FastAPI()
 
@@ -87,10 +88,18 @@ async def get_events(request: Request):
                 try:
                     for message in consumer:
                         data = message.value
-                        logging.info('Data received from Kafka: %s', data)
+                        logging.info('Data received from Kafka: %s', data['time_of_action'])
                         # Get IIN from Milvus DB
-
+                        card_id = get_iin_by_vector([data['face_info']['vector']])
+                        logging.info("current_iin: %s", card_id)
                         # End of Get IIN from Milvus DB
+                        # Converting str datetime to datetime object
+                        timestamp_dt = datetime.strptime(data['time_of_action'], '%Y-%m-%d %H:%M:%S')
+                        # Revise the following after middleware is implemented
+                        point_id = 1
+                        decision = True
+                        gender = 'male'
+                        age = 34
 
                         # Save to database
                         try:
@@ -99,9 +108,13 @@ async def get_events(request: Request):
                             # VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                             # ''', data['point_id'], data['card_id'], data['decision'], data['crop_url'], data['original_image_url'], data['time_of_action'], data['gender'], data['age'], data['camera_id'])
                             await conn.execute('''
-                            INSERT INTO innout (point_id, card_id, decision, crop_url, original_image_url, time_of_action, gender, age, camera_id)
+                            INSERT INTO innout (point_id, card_id, decision, 
+                                               crop_url, original_image_url, time_of_action, 
+                                               gender, age, camera_id)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                            ''', None, data['card_id'], None, data['crop_path'], data['frame_path'], data['time_of_action'], None, None, data['camera_id'])
+                            ''', point_id, str(card_id), decision, 
+                                data['crop_path'], data['frame_path'], timestamp_dt, 
+                                gender, age, data['camera_id'])
                             # {'start_time': start_time, 'crop_path': aligned_path, 'frame_path': original_frame_path, 'time_of_action': timestamp, 'gender': None, 'age': None, 'camera_id': camera_id, 'face_embedding': embs, 'face_info': res_dict, 'camera_name': camera_name}
                             logger.info(f"Data written to database: {data}")
                         except Exception as e:
